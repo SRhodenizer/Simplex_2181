@@ -463,10 +463,10 @@ void MyMesh::GenerateTorus(float a_fOuterRadius, float a_fInnerRadius, int a_nSu
 	vector3 oCenter = vector3(0, 0, 0);//the center point of the base circle 
 
 	float tubeRadius = .5f* (a_fOuterRadius - a_fInnerRadius);//the radius for cylinder calc
-	float tubeHeight = tubeRadius * a_nSubdivisionsA;
+	float tubeHeight = tubeRadius * a_nSubdivisionsA;//gets the length of the radius for the cylinders
 
-	float outerAngle = 360.0f / a_nSubdivisionsA; //gets the standard deviation in angles for the number of subdivisions 
-	float innerAngle = 360.0f / a_nSubdivisionsB; //gets the standard deviation in angles for the number of subdivisions 
+	float outerAngle = 360.0f / a_nSubdivisionsA; //gets the standard deviation in angles for the number of subdivisionsA 
+	float innerAngle = 360.0f / a_nSubdivisionsB; //gets the standard deviation in angles for the number of subdivisionsB 
 
 	//variables for the cylinder
 	vector3 baseLeft;
@@ -476,22 +476,36 @@ void MyMesh::GenerateTorus(float a_fOuterRadius, float a_fInnerRadius, int a_nSu
 	vector3 topRight = vector3(tubeRadius * std::cos(0), .5 * tubeHeight, tubeRadius *std::sin(0));
 	vector3 topCenter = vector3(0, .5 * tubeHeight, 0);//the center point of the top circle
 
-	for (int i = 0; i <= a_nSubdivisionsA; i++) //for each sub division
+	for (int i = 0; i <= 1/* a_nSubdivisionsA*/; i++) //for each sub division
 	{
 		//gets the current degree interval 
 		float currentAngle = outerAngle * i;
 
-		baseRight = baseRight * std::tan(currentAngle* 3.14159f / 180);
-		baseCenter = baseCenter * std::tan(currentAngle* 3.14159f / 180);
-		topRight = topRight * std::tan(currentAngle* 3.14159f / 180);
-		topCenter = topCenter * std::tan(currentAngle* 3.14159f / 180);
+		//rotate the points for the cylinder parts by outerangle
 
+		//rotation with respect to x
+		baseRight.x = baseRight.x *std::cos(currentAngle* 3.14159f / 180) + baseRight.x * -1 * std::sin(currentAngle* 3.14159f / 180);
+		baseRight.y = baseRight.y *std::sin(currentAngle* 3.14159f / 180) + baseRight.y * -1 * std::cos(currentAngle* 3.14159f / 180);
 
+		topRight.x = topRight.x *std::cos(currentAngle* 3.14159f / 180) + topRight.x * -1 * std::sin(currentAngle* 3.14159f / 180);
+		topRight.y = topRight.y *std::sin(currentAngle* 3.14159f / 180) + topRight.y * -1 * std::cos(currentAngle* 3.14159f / 180);
+
+		baseLeft.x = baseLeft.x *std::cos(currentAngle* 3.14159f / 180) + baseLeft.x * -1 * std::sin(currentAngle* 3.14159f / 180);
+		baseLeft.y = baseLeft.y *std::sin(currentAngle* 3.14159f / 180) + baseLeft.y * -1 * std::cos(currentAngle* 3.14159f / 180);
+
+		topLeft.x = topLeft.x *std::cos(currentAngle* 3.14159f / 180) + topLeft.x * -1 * std::sin(currentAngle* 3.14159f / 180);
+		topLeft.y = topLeft.y *std::sin(currentAngle* 3.14159f / 180) + topLeft.y * -1 * std::cos(currentAngle* 3.14159f / 180);
+
+		topCenter.x = topCenter.x *std::cos(currentAngle* 3.14159f / 180) + topCenter.x * -1 * std::sin(currentAngle* 3.14159f / 180);
+		topCenter.y = topCenter.y *std::sin(currentAngle* 3.14159f / 180) + topCenter.y * -1 * std::cos(currentAngle* 3.14159f / 180);
+
+		baseCenter.x = baseCenter.x *std::cos(currentAngle* 3.14159f / 180) + baseCenter.x * -1 * std::sin(currentAngle* 3.14159f / 180);
+		baseCenter.y = baseCenter.y *std::sin(currentAngle* 3.14159f / 180) + baseCenter.y * -1 * std::cos(currentAngle* 3.14159f / 180);
 
 		for (int j = 0; j <= a_nSubdivisionsB; j++) //cylinder loop
 		{
 			//gets the current degree interval 
-			float newAngle = innerAngle * i;
+			float newAngle = innerAngle * j;
 
 			//sets points for the base circle's triangle 
 			baseLeft = baseRight;//changes the left point to the previous right point
@@ -501,7 +515,9 @@ void MyMesh::GenerateTorus(float a_fOuterRadius, float a_fInnerRadius, int a_nSu
 			topLeft = topRight;//changes the left point to the previous right point
 			topRight = vector3(tubeRadius * std::cos(newAngle * 3.14159f / 180), .5 * tubeHeight, tubeRadius *std::sin(newAngle * 3.14159f / 180));//changes the right point to be one angle interval over 
 
-			AddQuad(topLeft, topRight, baseLeft, baseRight);//draws the quads for the taurus segment
+			//AddTri(topRight, topLeft, topCenter);//draws the tri for the top circle
+			AddQuad(topLeft, topRight, baseLeft, baseRight);//draws the quad in between the base triangles
+			//AddTri(baseLeft, baseRight, baseCenter);//draws the tri at the base circle
 		}
 	}
 
@@ -526,9 +542,49 @@ void MyMesh::GenerateSphere(float a_fRadius, int a_nSubdivisions, vector3 a_v3Co
 	Release();
 	Init();
 
-	// Replace this with your code
-	GenerateCube(a_fRadius * 2.0f, a_v3Color);
-	// -------------------------------
+	//creates the cone
+	vector3 baseLeft;
+	vector3 baseRight = vector3(a_fRadius * std::cos(0), -1*a_fRadius + (a_fRadius/a_nSubdivisions), .5f * a_fRadius *std::sin(0)); //the right point in the tri to draw, initialized to be at the 0th angle interval  
+	vector3 baseCenter = vector3(0, -1 * a_fRadius, 0);//the center point of the base circle 
+
+	vector3 topLeft;
+	vector3 topRight = vector3(a_fRadius * std::cos(0), a_fRadius, .5f * a_fRadius *std::sin(0)); //the right point in the tri to draw, initialized to be at the 0th angle interval  
+	vector3 topCenter = vector3(0,  a_fRadius, 0);//the center point of the top circle 
+
+
+	float angle = 360.0f / a_nSubdivisions; //gets the standard deviation in angles for the number of subdivisions 
+
+	for (int i = 0; i <= a_nSubdivisions; i++) //for each sub division
+	{
+		//gets the current degree interval 
+		float currentAngle = angle * i;
+
+		baseLeft = baseRight;//changes the left point to the previous right point
+		baseRight = vector3(a_fRadius * std::cos(currentAngle * 3.14159f / 180), -1 * a_fRadius + (a_fRadius / a_nSubdivisions), a_fRadius *std::sin(currentAngle* 3.14159f / 180));//changes the right point to be one angle interval over 
+		
+		topLeft = topRight;//changes the left point to the previous right point
+		topRight = vector3(a_fRadius * std::cos(currentAngle * 3.14159f / 180), a_fRadius - (a_fRadius / a_nSubdivisions), a_fRadius *std::sin(currentAngle* 3.14159f / 180));//changes the right point to be one angle interval over 
+
+		AddTri(baseLeft, baseRight, baseCenter);//draws the tris at the base circle
+	
+		if (i != 0) 
+		{
+			AddTri(topRight, topLeft, topCenter);//draws the tri at the top circle
+		}
+
+
+		for (int j = 1; j < a_nSubdivisions; j++)
+		{
+			vector3 qPBaseLeft = vector3 (baseLeft.x , baseLeft.y + j*(a_fRadius / a_nSubdivisions),baseLeft.z);
+			vector3 qPBaseRight = vector3(baseRight.x, baseRight.y + j*(a_fRadius / a_nSubdivisions), baseRight.z);
+
+
+			vector3 qPTopLeft = vector3(topLeft.x, topLeft.y - j*(a_fRadius / a_nSubdivisions), topLeft.z);
+			vector3 qPTopRight = vector3(topRight.x, topRight.y - j*(a_fRadius / a_nSubdivisions), topRight.z);
+
+			AddQuad(qPBaseRight, qPBaseLeft, qPTopRight, qPTopLeft);
+		}
+	}
 
 	// Adding information about color
 	CompleteMesh(a_v3Color);
