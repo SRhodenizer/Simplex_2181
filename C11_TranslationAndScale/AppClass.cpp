@@ -1,10 +1,18 @@
 #include "AppClass.h"
+
+std::vector<MyMesh*> meshList;
+
 void Application::InitVariables(void)
 {
 	//init the mesh
-	m_pMesh = new MyMesh();
+	for (float i = 0; i < 46; i++)//the number of cubes needed to make the alien
+	{
+		 m_pMesh = new MyMesh();
+		 m_pMesh->GenerateCube(1, C_BLACK);
+		 meshList.push_back(m_pMesh);
+	}
+	
 	//m_pMesh->GenerateCube(1.0f, C_WHITE);
-	m_pMesh->GenerateSphere(1.0f, 5, C_WHITE);
 }
 void Application::Update(void)
 {
@@ -31,7 +39,18 @@ void Application::Display(void)
 	value += 0.01f;
 
 	//matrix4 m4Model = m4Translate * m4Scale;
-	matrix4 m4Model = m4Scale * m4Translate;
+	matrix4 m4Model = m4Scale;// *m4Translate;
+
+	//matrix for getting the cubes in the shape of the alien
+	matrix4 translation = matrix4();
+	for (int i = 0; i < 46; i++)
+	{
+		meshList[i]->Render(m4Projection, m4View, m4Model);//makes all the shapes 
+		translation = glm::translate(vector3(i, 0, 0));//translation matrix that moves them so they are not on top of each other 
+		m4Model = m4Scale * translation;//applies first matrix
+		m4Model = m4Model * m4Translate;//applies the move right matrix
+	}
+
 
 	m_pMesh->Render(m4Projection, m4View, m4Model);
 	

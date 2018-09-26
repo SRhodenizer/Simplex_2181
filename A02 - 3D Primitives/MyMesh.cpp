@@ -467,16 +467,16 @@ void MyMesh::GenerateTorus(float a_fOuterRadius, float a_fInnerRadius, int a_nSu
 	matrix4 rotation = matrix4();//rotation to make sure all the faces are standing up
 	matrix4 rotation2 = matrix4();//the rotation to make sure all the disks face where they need to be
 
-	rotation = glm::rotate((3.14159f/2) ,vector3(1,0,0));//rotate 90 degrees or pi/2 radians
+	rotation = glm::rotate((3.14159f/2) ,vector3(1.0f,0.0f,0.0f));//rotate 90 degrees or pi/2 radians
 
 	for (int i = 0; i < a_nSubdivisionsA; i++)//for each torus subdivision
 	{
 		float currentOAngle = outerAngle * i;//sets the current angle for rotation
-		rotation2 = glm::rotate((-currentOAngle * (3.14159f / 180)), vector3(0, 1.0f, 0));//rotate the points currentOuterAngle degrees 
+		rotation2 = glm::rotate((-currentOAngle * (3.14159f / 180.0f)), vector3(0, 1.0f, 0));//rotate the points currentOuterAngle degrees 
 		cylinCenter = vector4(toCenter *std::cos(currentOAngle*(3.14159f / 180)), 0, toCenter*std::sin(currentOAngle * (3.14159f / 180)),0);//sets the center point for the current cylinder segment
 
 		vector4 cylinLeft;//sets up left point for circle math
-		vector4 cylinRight = vector4(cylinderRadius*(1 / 180.0f), 0, 0,0);//sets up right point for circle math
+		vector4 cylinRight = vector4(cylinderRadius*(1 / 180.0f), 0, 0, 0);//sets up right point for circle math
 
 		std::vector<vector3> shapePoints;//vector to push points into 
 		shapeList.push_back(shapePoints);//pushes that vector into shapeList
@@ -486,18 +486,19 @@ void MyMesh::GenerateTorus(float a_fOuterRadius, float a_fInnerRadius, int a_nSu
 		{
 			float currentIAngle = innerAngle * j;//sets current angle for rotation
 			cylinLeft = cylinRight;//sets the left point to the old right point 
-			cylinRight = cylinCenter + vector4(cylinderRadius * std::cos(currentIAngle * (3.14159f/180)),0,cylinderRadius*std::sin(currentIAngle*(3.14159f/180)),0);//moves the right point over another subdivision
-
+			cylinRight = cylinCenter + vector4(cylinderRadius * std::cos(((currentIAngle * 3.14159f)/180)), 0, cylinderRadius*std::sin((currentIAngle*3.14159f)/180),0);//moves the right point over another subdivision
+			
 			//rotates the right point to the correct orientation
 			cylinRight = rotation * (cylinRight - cylinCenter);
-			cylinRight = rotation2 * (cylinRight + cylinCenter);
-
-			if (j == 0)//for the first time only  
-			{
-				shapeList[i].push_back(cylinLeft);//push back the left point 
-			}
-				
+			cylinRight = (rotation2 * cylinRight) + cylinCenter;
+	
 			shapeList[i].push_back(cylinRight);//push back the right point 
+			/*if (j != 0)
+			{
+				AddTri(cylinCenter, cylinRight, cylinLeft);
+				AddTri(cylinCenter, cylinLeft, cylinRight);
+			}*/
+			
 			
 		}
 	}
@@ -512,7 +513,7 @@ void MyMesh::GenerateTorus(float a_fOuterRadius, float a_fInnerRadius, int a_nSu
 			int nextJ = (j + 1) % a_nSubdivisionsB;
 
 			//draws the quad
-			AddQuad(shapeList[i][j], shapeList[i][nextJ] , shapeList[nextI][j], shapeList[nextI][nextJ]);
+			AddQuad(shapeList[i][j] , shapeList[nextI][j], shapeList[i][nextJ], shapeList[nextI][nextJ]);
 		}
 	}
 	
@@ -538,7 +539,9 @@ void MyMesh::GenerateSphere(float a_fRadius, int a_nSubdivisions, vector3 a_v3Co
 	Release();
 	Init();
 
-	//creates the cone
+	std::vector<std::vector<vector3>> shapeList;//a list of lists of points in the cylinder faces 
+
+	//creates the top and bottom circle points 
 	vector3 baseLeft;
 	vector3 baseRight = vector3(a_fRadius * std::cos(0), -1*a_fRadius + (2* a_fRadius/a_nSubdivisions), .5f * a_fRadius *std::sin(0)); //the right point in the tri to draw, initialized to be at the 0th angle interval  
 	vector3 baseCenter = vector3(0, -1 * a_fRadius, 0);//the center point of the base circle 
@@ -547,38 +550,68 @@ void MyMesh::GenerateSphere(float a_fRadius, int a_nSubdivisions, vector3 a_v3Co
 	vector3 topRight = vector3(a_fRadius * std::cos(0), a_fRadius, .5f * a_fRadius *std::sin(0)); //the right point in the tri to draw, initialized to be at the 0th angle interval  
 	vector3 topCenter = vector3(0,  a_fRadius, 0);//the center point of the top circle 
 
+	//vector3s to store the previous base and top values 
+	vector3 prevTopLeft;
+	vector3 prevTopRight;
+
+	vector3 prevBaseLeft;
+	vector3 prevBaseRight;
+
 
 	float angle = 360.0f / a_nSubdivisions; //gets the standard deviation in angles for the number of subdivisions 
 
-	for (int i = 0; i <= a_nSubdivisions; i++) //for each sub division
+	for (int i = 2; i <= a_nSubdivisions; i++) //for each sub division
 	{
-		//gets the current degree interval 
-		float currentAngle = angle * i;
+		std::vector<vector3> shapePoints;
+		shapeList.push_back(shapePoints);
 
-		baseLeft = baseRight;//changes the left point to the previous right point
-		baseRight = vector3(a_fRadius * std::cos(currentAngle * 3.14159f / 180), -1 * a_fRadius + (a_fRadius / a_nSubdivisions), a_fRadius *std::sin(currentAngle* 3.14159f / 180));//changes the right point to be one angle interval over 
-		
-		topLeft = topRight;//changes the left point to the previous right point
-		topRight = vector3(a_fRadius * std::cos(currentAngle * 3.14159f / 180), a_fRadius - (a_fRadius / a_nSubdivisions), a_fRadius *std::sin(currentAngle* 3.14159f / 180));//changes the right point to be one angle interval over 
-
-		AddTri(baseLeft, baseRight, baseCenter);//draws the tris at the base circle
-	
-		if (i != 0) 
+		for (int j = 0; j <= a_nSubdivisions; j++) 
 		{
-			AddTri(topRight, topLeft, topCenter);//draws the tri at the top circle
+			//gets the current degree interval 
+			float currentAngle = angle * j;
+
+			//sets points for circle drawing 
+			baseCenter = vector3(0, -1 * i* (a_fRadius / a_nSubdivisions), 0);
+			baseLeft = baseRight;//changes the left point to the previous right point
+			baseRight = vector3(i*(a_fRadius / a_nSubdivisions) * std::cos(currentAngle * 3.14159f / 180), -1 * a_fRadius + i*(a_fRadius / a_nSubdivisions), i*(a_fRadius / a_nSubdivisions) *std::sin(currentAngle* 3.14159f / 180));//changes the right point to be one angle interval over 
+
+			topCenter = vector3(0, i* (a_fRadius/a_nSubdivisions), 0);
+			topLeft = topRight;//changes the left point to the previous right point
+			topRight = vector3(i*(a_fRadius / a_nSubdivisions) * std::cos(currentAngle * 3.14159f / 180), a_fRadius - i*(a_fRadius / a_nSubdivisions), i*(a_fRadius / a_nSubdivisions) *std::sin(currentAngle* 3.14159f / 180));//changes the right point to be one angle interval over 
+
+			//normalize the points and multiply them by the radius
+			baseCenter = glm::normalize(baseCenter) * a_fRadius;
+			baseRight = glm::normalize(baseRight)* a_fRadius;
+			baseLeft = glm::normalize(baseLeft)* a_fRadius;
+
+			topCenter = glm::normalize(topCenter)* a_fRadius;
+			topRight = glm::normalize(topRight)* a_fRadius;
+			topLeft = glm::normalize(topLeft)* a_fRadius;
+
+			//push back the points for later connection
+			shapeList[i-2].push_back(baseRight);
+
+			if (j != 0 && i ==2)
+			{
+				AddTri(baseLeft, baseRight, baseCenter);//draws the tris at the base circle
+				AddTri(topRight, topLeft, topCenter);//draws the tri at the top circle
+			}
 		}
+		
+	}
 
-
-		for (int j = 1; j < a_nSubdivisions; j++)
+	//draws quads to connect the points 
+	for (int i = 0; i < a_nSubdivisions-1; i++)
+	{
+		for (int j = 0; j < a_nSubdivisions; j++)//for each point in the circle
 		{
-			vector3 qPBaseLeft = vector3(baseLeft.x, baseLeft.y + j * (a_fRadius / a_nSubdivisions), baseLeft.z );
-			vector3 qPBaseRight = vector3(baseRight.x, baseRight.y + j * (a_fRadius / a_nSubdivisions), baseRight.z);
+			//makes the next values in the vectors safe to use 
+			//for the base
+			int nextBI = (i + 1) % (a_nSubdivisions-1);
+			int nextBJ = (j + 1) % (a_nSubdivisions-1);
 
-
-			vector3 qPTopLeft = vector3(topLeft.x, topLeft.y - j*(a_fRadius / a_nSubdivisions), topLeft.z );
-			vector3 qPTopRight = vector3(topRight.x, topRight.y - j*(a_fRadius / a_nSubdivisions), topRight.z );
-
-			AddQuad(qPBaseRight, qPBaseLeft, qPTopRight, qPTopLeft);
+			//draws the quad
+			AddQuad(shapeList[i][j], shapeList[nextBI][j], shapeList[i][nextBJ], shapeList[nextBI][nextBJ]);//from the bottom
 		}
 	}
 
