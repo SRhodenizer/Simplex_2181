@@ -2,6 +2,7 @@
 
 //the list of stop lists
 std::vector<std::vector<vector3>> stops;
+static std::vector<int> numStop;
 
 void Application::InitVariables(void)
 {
@@ -56,13 +57,12 @@ void Application::InitVariables(void)
 		for (int u = 0; u < i; u++) 
 		{
 			float currentAngle = angle * u;
-			float x = fSize * std::cos(currentAngle * 3.14159f / 180);
-			float y = fSize * std::sin(currentAngle * 3.14159f / 180);
 
 			stops[num].push_back(vector3(fSize * std::cos(currentAngle * 3.14159f / 180),fSize * std::sin(currentAngle * 3.14159f / 180),0));//pushes the stop to the list 
 		}
 		num++;//increments the num so we use the next list 
 		fSize += 0.5f; //increment the size for the next orbit
+		numStop.push_back(0);//helps with reset fixing 
 	}
 }
 void Application::Update(void)
@@ -102,34 +102,42 @@ void Application::Display(void)
 	//map the value to be between 0.0 and 1.0
 	float fPercentage = MapValue(fTimer, 0.0f, fTimeBetweenStops, 0.0f, 1.0f);
 
-	fPercentage = fmod(fPercentage,1);//prevents the percentage from going over 100%
 
 	// draw a shapes
+	
+	static int currShape = 0;
 	for (uint i = 0; i < m_uOrbits; ++i) //the number of which shape we are currently using 
 	{
 		vector3 v3CurrentPos;
 		m_pMeshMngr->AddMeshToRenderList(m_shapeList[i], glm::rotate(m4Offset, 1.5708f, AXIS_X));
 		matrix4 m4Model;
 
-		for (int numStop = 0; numStop < i+3; numStop++)
-		{
-			//changes the position for drawing the sphere 
-			vector3 startPos = stops[i][numStop];
-			vector3 endPos = stops[i][(numStop + 1) % stops[i].size()];
+		//changes the position for drawing the sphere 
+		vector3 startPos = stops[i][numStop[i] % stops[i].size()];
+		vector3 endPos = stops[i][(numStop[i] + 1) % stops[i].size()];
 
-			v3CurrentPos = glm::lerp(startPos, endPos, fPercentage);//lerps there 
+		v3CurrentPos = glm::lerp(startPos, endPos, fPercentage);//lerps there 
 
-			orbitSize += .5f;//changes the values so all spheres line up with all the orbitals
+		orbitSize += .5f;//changes the values so all spheres line up with all the orbitals
 			
-			m4Model = glm::translate(m4Offset, v3CurrentPos);
-			
-		}
+		m4Model = glm::translate(m4Offset, v3CurrentPos);
 		
+		currShape = i;
+
+
 		//draw spheres
 		m_pMeshMngr->AddSphereToRenderList(m4Model * glm::scale(vector3(0.1)), C_WHITE);
 	}
-	
-	
+
+	if (fPercentage >= 1.0f)
+	{
+		for (int j = 0; j < numStop.size();j++) //loops the route for all shapes 
+		{
+			//go to the next route
+			numStop[j]++;
+		}
+		fTimer = m_pSystem->GetDeltaTime(uClock);//restart the clock
+	}
 	
 
 	//render list call
