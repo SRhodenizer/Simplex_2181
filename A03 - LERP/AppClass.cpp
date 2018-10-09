@@ -103,9 +103,8 @@ void Application::Display(void)
 	float fPercentage = MapValue(fTimer, 0.0f, fTimeBetweenStops, 0.0f, 1.0f);
 
 
-	// draw a shapes
+	// draw the shapes
 	
-	static int currShape = 0;
 	for (uint i = 0; i < m_uOrbits; ++i) //the number of which shape we are currently using 
 	{
 		vector3 v3CurrentPos;
@@ -122,9 +121,6 @@ void Application::Display(void)
 			
 		m4Model = glm::translate(m4Offset, v3CurrentPos);
 		
-		currShape = i;
-
-
 		//draw spheres
 		m_pMeshMngr->AddSphereToRenderList(m4Model * glm::scale(vector3(0.1)), C_WHITE);
 	}
