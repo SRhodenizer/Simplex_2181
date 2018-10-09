@@ -1,8 +1,12 @@
 #include "AppClass.h"
+
+//the list of stop lists
+std::vector<std::vector<vector3>> stops;
+
 void Application::InitVariables(void)
 {
 	//Change this to your name and email
-	m_sProgrammer = "Alberto Bobadilla - labigm@rit.edu";
+	m_sProgrammer = "Stephen Rhodenizer - scr3876@rit.edu";
 	
 	//Set the position and target of the camera
 	//(I'm at [0,0,10], looking at [0,0,0] and up is the positive Y axis)
@@ -32,12 +36,33 @@ void Application::InitVariables(void)
 		This part will create the orbits, it start at 3 because that is the minimum subdivisions a torus can have
 	*/
 	uint uSides = 3; //start with the minimal 3 sides
+
+
+	int num = 0;//the current list we are modifying;
 	for (uint i = uSides; i < m_uOrbits + uSides; i++)
 	{
 		vector3 v3Color = WaveLengthToRGB(uColor); //calculate color based on wavelength
 		m_shapeList.push_back(m_pMeshMngr->GenerateTorus(fSize, fSize - 0.1f, 3, i, v3Color)); //generate a custom torus and add it to the meshmanager
-		fSize += 0.5f; //increment the size for the next orbit
+		
 		uColor -= static_cast<uint>(decrements); //decrease the wavelength
+
+		//list of stops in the shape
+		std::vector<vector3> shape;
+		stops.push_back(shape);//push the list to the list of lists 
+
+		float angle = 360 / i;
+
+		//make the list of stops for each shape 
+		for (int u = 0; u < i; u++) 
+		{
+			float currentAngle = angle * u;
+			float x = fSize * std::cos(currentAngle * 3.14159f / 180);
+			float y = fSize * std::sin(currentAngle * 3.14159f / 180);
+
+			stops[num].push_back(vector3(fSize * std::cos(currentAngle * 3.14159f / 180),fSize * std::sin(currentAngle * 3.14159f / 180),0));//pushes the stop to the list 
+		}
+		num++;//increments the num so we use the next list 
+		fSize += 0.5f; //increment the size for the next orbit
 	}
 }
 void Application::Update(void)
@@ -64,18 +89,48 @@ void Application::Display(void)
 	*/
 	//m4Offset = glm::rotate(IDENTITY_M4, 1.5708f, AXIS_Z);
 
+	//the size of the orbit 
+	float orbitSize = 1.0f;
+
+	//Get a timer
+	static float fTimer = 0;//store the new timer
+	static uint uClock = m_pSystem->GenClock(); //generate a new clock for that timer
+	fTimer += m_pSystem->GetDeltaTime(uClock); //get the delta time for that timer
+
+	//get the percentage
+	float fTimeBetweenStops = 2.0;//in seconds
+	//map the value to be between 0.0 and 1.0
+	float fPercentage = MapValue(fTimer, 0.0f, fTimeBetweenStops, 0.0f, 1.0f);
+
+	fPercentage = fmod(fPercentage,1);//prevents the percentage from going over 100%
+
 	// draw a shapes
-	for (uint i = 0; i < m_uOrbits; ++i)
+	for (uint i = 0; i < m_uOrbits; ++i) //the number of which shape we are currently using 
 	{
+		vector3 v3CurrentPos;
 		m_pMeshMngr->AddMeshToRenderList(m_shapeList[i], glm::rotate(m4Offset, 1.5708f, AXIS_X));
+		matrix4 m4Model;
 
-		//calculate the current position
-		vector3 v3CurrentPos = ZERO_V3;
-		matrix4 m4Model = glm::translate(m4Offset, v3CurrentPos);
+		for (int numStop = 0; numStop < i+3; numStop++)
+		{
+			//changes the position for drawing the sphere 
+			vector3 startPos = stops[i][numStop];
+			vector3 endPos = stops[i][(numStop + 1) % stops[i].size()];
 
+			v3CurrentPos = glm::lerp(startPos, endPos, fPercentage);//lerps there 
+
+			orbitSize += .5f;//changes the values so all spheres line up with all the orbitals
+			
+			m4Model = glm::translate(m4Offset, v3CurrentPos);
+			
+		}
+		
 		//draw spheres
 		m_pMeshMngr->AddSphereToRenderList(m4Model * glm::scale(vector3(0.1)), C_WHITE);
 	}
+	
+	
+	
 
 	//render list call
 	m_uRenderCallCount = m_pMeshMngr->Render();
