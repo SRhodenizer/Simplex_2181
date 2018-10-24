@@ -31,8 +31,7 @@ class MyCamera
 
 	vector3 forward = vector3(0.0f, 0.0f, 1.0f);//a vector that shows where the Camera's moving forawrd, starts in the Z Axis 
 	vector3 left = vector3(1.0f, 0.0f, 0.0f);//a vector that points to the left of the Camera at all times, starts at the X axis
-	bool horizFlip = false;
-	bool vertFlip = false;
+
 public:
 	/*
 	USAGE: Constructor
@@ -228,8 +227,8 @@ public:
 	ARGUMENTS: float a_fDistance = 0.1f -> amount of movement
 	OUTPUT: ---
 	*/
-	void MoveHorizontal(float a_fDistance = 0.1f);//used to have horizontal camera rotation
-	void MoveVertical(float a_fDistance = 0.1f);//used to have vertical camera rotation
+	void RotateHorizontal(float a_fDistance = 0.1f);//used to have horizontal camera rotation
+	void RotateVertical(float a_fDistance = 0.1f);//used to have vertical camera rotation
 	/*
 	USAGE: Translates the camera right or left
 	ARGUMENTS: float a_fDistance = 0.1f -> amount of movement

@@ -351,28 +351,29 @@ void Application::CameraRotation(float a_fSpeed)
 	{
 		fDeltaMouse = static_cast<float>(CenterX - MouseX);
 		fAngleY += fDeltaMouse * a_fSpeed;
-		m_pCamera->MoveHorizontal(fAngleY);//call rotation method
+		m_pCamera->RotateHorizontal(fAngleY);//call rotation method
 	}
 	else if (MouseX > CenterX)
 	{
 		fDeltaMouse = static_cast<float>(MouseX - CenterX);
 		fAngleY -= fDeltaMouse * a_fSpeed;
-		m_pCamera->MoveHorizontal(fAngleY);//call rotation method
+		m_pCamera->RotateHorizontal(fAngleY);//call rotation method
 	}
 
 	if (MouseY < CenterY)
 	{
 		fDeltaMouse = static_cast<float>(CenterY - MouseY);
 		fAngleX -= fDeltaMouse * a_fSpeed;
-		m_pCamera->MoveVertical(fAngleX);//call rotation method
+		m_pCamera->RotateVertical(fAngleX);//call rotation method
 	}
 	else if (MouseY > CenterY)
 	{
 		fDeltaMouse = static_cast<float>(MouseY - CenterY);
 		fAngleX += fDeltaMouse * a_fSpeed;
-		m_pCamera->MoveVertical(fAngleX);//call rotation method
+		m_pCamera->RotateVertical(fAngleX);//call rotation method
 	}
 	//Change the Yaw and the Pitch of the camera
+	
 	SetCursorPos(CenterX, CenterY);//Position the mouse in the center
 }
 //Keyboard
