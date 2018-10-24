@@ -150,13 +150,86 @@ void Simplex::MyCamera::CalculateProjectionMatrix(void)
 	}
 }
 
-void MyCamera::MoveForward(float a_fDistance)
+//translation
+void MyCamera::MoveForward(float a_fDistance)//moves camera forward/backward for W and S keys
 {
-	//The following is just an example and does not take in account the forward vector (AKA view vector)
-	m_v3Position += vector3(0.0f, 0.0f,-a_fDistance);
-	m_v3Target += vector3(0.0f, 0.0f, -a_fDistance);
-	m_v3Above += vector3(0.0f, 0.0f, -a_fDistance);
+	//The following is just an example and does take in account the forward vector (AKA view vector)
+	m_v3Position += -a_fDistance * forward;
+	m_v3Target += -a_fDistance * forward;
+	m_v3Above += -a_fDistance * forward;
 }
 
-void MyCamera::MoveVertical(float a_fDistance){}//Needs to be defined
-void MyCamera::MoveSideways(float a_fDistance){}//Needs to be defined
+void MyCamera::MoveSideways(float a_fDistance)//moves camera sideways for A and D keys
+{
+	m_v3Position += -a_fDistance * left;
+	m_v3Target += -a_fDistance * left;
+	m_v3Above += -a_fDistance * left;
+}
+
+//rotation
+void MyCamera::MoveVertical(float a_fDistance)//rotate up down
+{
+	if ((m_v3Target.y < -11.5f && vertFlip == false)|| (m_v3Target.y > 11.5f && vertFlip == false))
+	{
+		vertFlip = true;
+	}
+	if (vertFlip == true) 
+	{
+	}
+	if (vertFlip == false) 
+	{
+		m_v3Target += vector3(0.0f, -a_fDistance, 0.0f);//move the target to rotate the view of the camera 
+	}
+
+	//m_v3Target = glm::normalize(m_v3Target) * glm::clamp(glm::distance(vector3(0,0,0), m_v3Target), -12.0f, 12.0f);//makes sure the target cannot go past a certain point 
+	forward = glm::normalize(m_v3Position -m_v3Target);//set the forward equal to what you're looking at but normalized
+	forward.y = 0;//make sure you don't walk straight up or down
+	left = vector3(forward.z, 0, -forward.x);//set the left to be perpendicular to the forward, specifically to the left
+}
+
+void MyCamera::MoveHorizontal(float a_fDistance)//rotate left right
+{
+	std::cout << "Target: X: " << m_v3Target.x << " Y: " << m_v3Target.y << " Z: " << m_v3Target.z << "\n";
+	if ((m_v3Target.x > 11.5f && m_v3Target.x < 44.5f && horizFlip == false))
+	{
+		horizFlip = true;
+		float x = m_v3Target.x;
+		m_v3Target.x = m_v3Target.z;
+		m_v3Target.z = x;
+	}
+	if ((m_v3Target.x < -11.5f && m_v3Target.x > -19.0f && horizFlip == false)) 
+	{
+		horizFlip = true;
+		float x = m_v3Target.x;
+		m_v3Target.x = -m_v3Target.z;
+		m_v3Target.z = x;
+	}
+	if (m_v3Target.z > 44.5f && horizFlip == true)
+	{
+		horizFlip = false;
+		float x = m_v3Target.x;
+		m_v3Target.x = m_v3Target.z;
+		m_v3Target.z = -x;
+	}
+	if ((m_v3Target.z < -19.0f && horizFlip == true)) 
+	{
+		horizFlip = false;
+		float x = m_v3Target.x;
+		m_v3Target.x = -m_v3Target.z;
+		m_v3Target.z = -x;
+	}
+	if (horizFlip == true) 
+	{
+		m_v3Target += vector3(0.0f, 0.0f, -a_fDistance);
+	}
+	if(horizFlip == false)
+	{
+		m_v3Target += vector3(-a_fDistance, 0.0f, 0.0f);//move the target to rotate the view of the camera
+	}
+	
+	std::cout << "Flip?: " << horizFlip << "\n";
+	//m_v3Target = glm::normalize(m_v3Target) * glm::clamp(glm::distance(vector3(0, 0, 0), m_v3Target), -12.0f, 12.0f);//makes sure the target cannot go past a certain point 
+	forward = glm::normalize(m_v3Position - m_v3Target);//set the forward equal to what you're looking at but normalized
+	forward.y = 0;//make sure you don't walk straight up or down
+	left = vector3(forward.z, 0, -forward.x);//set the left to be perpendicular to the forward, specifically to the left
+}
