@@ -82,12 +82,60 @@ void MyRigidBody::SetModelMatrix(matrix4 a_m4ModelMatrix)
 	if (a_m4ModelMatrix == m_m4ToWorld)
 		return;
 
+	//Assign the model matrix
 	m_m4ToWorld = a_m4ModelMatrix;
-	
-	//your code goes here---------------------
-	m_v3MinG = m_v3MinL;
-	m_v3MaxG = m_v3MaxL;
-	//----------------------------------------
+
+	//Calculate the corners of the cube
+	vector3 corners[8];//array of corners 
+
+	//the corner values 
+	corners[0] = m_v3MinL;
+	corners[1] = vector3(m_v3MaxL.x, m_v3MinL.y, m_v3MinL.z);
+	corners[2] = vector3(m_v3MinL.x, m_v3MaxL.y, m_v3MinL.z);
+	corners[3] = vector3(m_v3MaxL.x, m_v3MaxL.y, m_v3MinL.z);
+	corners[4] = vector3(m_v3MinL.x, m_v3MinL.y, m_v3MaxL.z);
+	corners[5] = vector3(m_v3MaxL.x, m_v3MinL.y, m_v3MaxL.z);
+	corners[6] = vector3(m_v3MinL.x, m_v3MaxL.y, m_v3MaxL.z);
+	corners[7] = m_v3MaxL;
+
+	//Convert from local to global
+	for (int i = 0; i < 8; ++i)
+	{
+		corners[i] = vector3(m_m4ToWorld * vector4(corners[i], 1.0f));
+	}
+
+	//set the max to one of the points 
+	m_v3MaxG = corners[0];
+	m_v3MinG = corners[0];
+
+	//make it the actual min and max 
+	for (uint i = 1; i < 8; ++i)
+	{
+		if (m_v3MaxG.x < corners[i].x) 
+		{
+			m_v3MaxG.x = corners[i].x;
+		} 
+		else if (m_v3MinG.x > corners[i].x) 
+		{
+			m_v3MinG.x = corners[i].x;
+		}
+		if (m_v3MaxG.y < corners[i].y) 
+		{
+			m_v3MaxG.y = corners[i].y;
+		} 
+		else if (m_v3MinG.y > corners[i].y) 
+		{
+			m_v3MinG.y = corners[i].y;
+		} 
+		if (m_v3MaxG.z < corners[i].z) 
+		{
+			m_v3MaxG.z = corners[i].z;
+		}
+		else if (m_v3MinG.z > corners[i].z) 
+		{
+			m_v3MinG.z = corners[i].z;
+		} 
+	}
 
 	//we calculate the distance between min and max vectors
 	m_v3ARBBSize = m_v3MaxG - m_v3MinG;
