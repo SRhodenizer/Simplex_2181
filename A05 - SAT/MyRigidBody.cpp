@@ -232,7 +232,9 @@ bool MyRigidBody::IsColliding(MyRigidBody* const a_pOther)
 	//if they are colliding check the SAT
 	if (bColliding)
 	{
-		if(SAT(a_pOther) != eSATResults::SAT_NONE)
+		int coll = SAT(a_pOther);
+		std::cout << coll << std::endl;
+		if(coll != eSATResults::SAT_NONE)
 			bColliding = false;// reset to false
 	}
 
@@ -276,9 +278,151 @@ void MyRigidBody::AddToRenderList(void)
 
 uint MyRigidBody::SAT(MyRigidBody* const a_pOther)
 {
-	/*
-	Your code goes here instead of this comment;
+	//axis defining in world space 
+	//first object
+	std::vector<vector3> obj1 = std::vector<vector3>();//0 is x, 1 is y, 2 is z
+	obj1.push_back((vector3(m_m4ToWorld * (vector4(1, 0, 0, 0)))));
+	obj1.push_back((vector3(m_m4ToWorld * (vector4(0, 1, 0, 0)))));
+	obj1.push_back((vector3(m_m4ToWorld * (vector4(0, 0, 1, 0)))));
+	
 
+	//second object
+	std::vector<vector3> obj2 = std::vector<vector3>();//0 is x, 1 is y, 2 is z
+	obj2.push_back((vector3(a_pOther->m_m4ToWorld * (vector4(1, 0, 0, 0)))));
+	obj2.push_back((vector3(a_pOther->m_m4ToWorld * (vector4(0, 1, 0, 0)))));
+	obj2.push_back((vector3(a_pOther->m_m4ToWorld * (vector4(0, 0, 1, 0)))));
+
+	//DBL_EPSILON number that is needed in book code 
+
+	//makes the rotation matrix expressing obj2 in obj1 frame 
+	matrix3 rotMat;
+	matrix3 absRotMat;
+
+	float num1;
+	float num2;
+
+	for (int i = 0; i < 3; i++) 
+	{
+		for (int j = 0; j < 3; j++) 
+		{
+			//dot product between the two objects axes 
+			rotMat[i][j] = glm::dot(obj1[i], obj2[j]);
+		}
+	}
+
+	//computes translation vector 
+	vector3 trans =  a_pOther->m_v3Center - m_v3Center;
+
+	//changes translation to the correct coordinate frame 
+	trans = vector3(glm::dot(trans, obj1[0]), glm::dot(trans, obj1[1]), glm::dot(trans, obj1[2]));
+
+
+	// Compute common subexpressions. Add in an epsilon term to
+	// counteract arithmetic errors when two edges are parallel and
+	// their cross product is (near) null 
+	for (int i = 0; i < 3; i++) 
+	{
+		for (int j = 0; j < 3; j++) 
+		{
+			absRotMat[i][j] = glm::abs(rotMat[i][j]) + DBL_EPSILON;
+		}
+	}
+
+	// Test axes L = A0, L = A1, L = A2
+	for (int i = 0; i < 3; i++) 
+	{
+		num1 = m_v3HalfWidth[i];
+		num2 = a_pOther->m_v3HalfWidth[0] * absRotMat[i][0] + a_pOther->m_v3HalfWidth[1] * absRotMat[i][1] + a_pOther->m_v3HalfWidth[2] * absRotMat[i][2];
+		if (glm::abs(trans[i]) > num1 + num2) 
+		{
+			std::cout << "Neat\n";
+			return eSATResults::SAT_AX;
+		}
+	}
+
+	// Test axes L = B0, L = B1, L = B2
+	for (int i = 0; i < 3; i++)
+	{
+		num1 = m_v3HalfWidth[0] * absRotMat[0][i] + m_v3HalfWidth[1] * absRotMat[1][i] + m_v3HalfWidth[2] * absRotMat[2][i];
+		num2 = a_pOther->m_v3HalfWidth[i];
+		if (glm::abs(trans[0]*rotMat[0][i] + trans[1]*rotMat[1][i]+trans[2]*rotMat[2][i]) > num1 + num2)
+		{
+			return eSATResults::SAT_AX;
+		}
+	}
+
+	// Test axis L = A0 x B0
+	num1 = m_v3HalfWidth[1]*absRotMat[2][0]+ m_v3HalfWidth[2]* absRotMat[1][0];
+	num2 = a_pOther->m_v3HalfWidth[1] * absRotMat[0][2] + a_pOther->m_v3HalfWidth[2] * absRotMat[0][1];
+	if (glm::abs(trans[2] * rotMat[1][0] - trans[1] * rotMat[2][0]) > num1 + num2) 
+	{
+		return eSATResults::SAT_AX;
+	}
+
+	// Test axis L = A0 x B1
+	num1 = m_v3HalfWidth[1] * absRotMat[2][1] + m_v3HalfWidth[2] * absRotMat[1][1];
+	num2 = a_pOther->m_v3HalfWidth[0] * absRotMat[0][2] + a_pOther->m_v3HalfWidth[2] * absRotMat[0][0];
+	if (glm::abs(trans[2] * rotMat[1][1] - trans[1] * rotMat[2][1]) > num1 + num2)
+	{
+		return eSATResults::SAT_AX;
+	}
+
+	// Test axis L = A0 x B2
+	num1 = m_v3HalfWidth[1] * absRotMat[2][2] + m_v3HalfWidth[2] * absRotMat[1][2];
+	num2 = a_pOther->m_v3HalfWidth[0] * absRotMat[0][1] + a_pOther->m_v3HalfWidth[1] * absRotMat[0][0];
+	if (glm::abs(trans[2] * rotMat[1][2] - trans[1] * rotMat[2][2]) > num1 + num2)
+	{
+		return eSATResults::SAT_AX;
+	}
+
+	// Test axis L = A1 x B0
+	num1 = m_v3HalfWidth[0] * absRotMat[2][0] + m_v3HalfWidth[2] * absRotMat[0][0];
+	num2 = a_pOther->m_v3HalfWidth[1] * absRotMat[1][2] + a_pOther->m_v3HalfWidth[2] * absRotMat[1][1];
+	if (glm::abs(trans[0] * rotMat[2][0] - trans[2] * rotMat[0][0]) > num1 + num2)
+	{
+		return eSATResults::SAT_AX;
+	}
+
+	// Test axis L = A1 x B1
+	num1 = m_v3HalfWidth[0] * absRotMat[2][1] + m_v3HalfWidth[2] * absRotMat[0][1];
+	num2 = a_pOther->m_v3HalfWidth[0] * absRotMat[1][2] + a_pOther->m_v3HalfWidth[2] * absRotMat[1][0];
+	if (glm::abs(trans[0] * rotMat[2][1] - trans[2] * rotMat[0][1]) > num1 + num2)
+	{
+		return eSATResults::SAT_AX;
+	}
+
+	// Test axis L = A1 x B2
+	num1 = m_v3HalfWidth[0] * absRotMat[2][2] + m_v3HalfWidth[2] * absRotMat[0][2];
+	num2 = a_pOther->m_v3HalfWidth[0] * absRotMat[1][1] + a_pOther->m_v3HalfWidth[1] * absRotMat[1][0];
+	if (glm::abs(trans[0] * rotMat[2][2] - trans[2] * rotMat[0][2]) > num1 + num2)
+	{
+		return eSATResults::SAT_AX;
+	}
+
+	// Test axis L = A2 x B0
+	num1 = m_v3HalfWidth[0] * absRotMat[1][0] + m_v3HalfWidth[1] * absRotMat[0][0];
+	num2 = a_pOther->m_v3HalfWidth[1] * absRotMat[2][2] + a_pOther->m_v3HalfWidth[2] * absRotMat[2][1];
+	if (glm::abs(trans[1] * rotMat[0][0] - trans[0] * rotMat[1][0]) > num1 + num2)
+	{
+		return eSATResults::SAT_AX;
+	}
+
+	// Test axis L = A2 x B1
+	num1 = m_v3HalfWidth[0] * absRotMat[1][1] + m_v3HalfWidth[1] * absRotMat[0][1];
+	num2 = a_pOther->m_v3HalfWidth[0] * absRotMat[2][2] + a_pOther->m_v3HalfWidth[2] * absRotMat[2][0];
+	if (glm::abs(trans[1] * rotMat[0][1] - trans[0] * rotMat[1][1]) > num1 + num2)
+	{
+		return eSATResults::SAT_AX;
+	}
+
+	// Test axis L = A2 x B2
+	num1 = m_v3HalfWidth[0] * absRotMat[1][2] + m_v3HalfWidth[1] * absRotMat[0][2];
+	num2 = a_pOther->m_v3HalfWidth[0] * absRotMat[2][1] + a_pOther->m_v3HalfWidth[1] * absRotMat[2][0];
+	if (glm::abs(trans[1] * rotMat[0][2] - trans[0] * rotMat[1][2]) > num1 + num2)
+	{
+		return eSATResults::SAT_AX;
+	}
+	/*
 	For this method, if there is an axis that separates the two objects
 	then the return will be different than 0; 1 for any separating axis
 	is ok if you are not going for the extra credit, if you could not
@@ -287,6 +431,8 @@ uint MyRigidBody::SAT(MyRigidBody* const a_pOther)
 	(eSATResults::SAT_NONE has a value of 0)
 	*/
 
+
 	//there is no axis test that separates this two objects
 	return eSATResults::SAT_NONE;
 }
+
