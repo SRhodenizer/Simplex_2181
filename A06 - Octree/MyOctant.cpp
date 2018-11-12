@@ -1,14 +1,18 @@
 #include "MyOctant.h"
 using namespace Simplex;
 
-uint MyOctant::m_uOctantCount = 0;
-uint MyOctant::m_uMaxLevel = 0;
-uint MyOctant::m_uIdealEntityCount = 0;
+//sets static members to avoid errors 
+uint MyOctant::m_uOctantCount;
+uint MyOctant::m_uMaxLevel;
+uint MyOctant::m_uIdealEntityCount;
 
+//initialize member variables 
 void MyOctant::Init(void)
 {
+	//initialize Mesh and Entity Managers 
 	m_pMeshMngr = MeshManager::GetInstance();
-	m_pEntityMngr = EntityManager::GetInstance();
+	m_pEntityMngr = EntityManager::GetInstance(); //STEPHEN, THIS IS THE WRONG CLASS, DUMMY ~JORDAN
+	std::cout << "Duh\n";
 }
 
 //constructor
@@ -17,18 +21,43 @@ MyOctant::MyOctant(uint a_nMaxLevel, uint a_nIdealEntityCount)
 	m_uMaxLevel = a_nMaxLevel;//sets max level 
 	m_uIdealEntityCount = a_nIdealEntityCount;//sets ideal entity count
 
+	Init();//initialize the member variables 
+
+	std::cout << "OctCount "<<m_uOctantCount << "\n";
+
 	if (m_uOctantCount == 0)//if this is the first octant make it the root  
 	{
 		m_uID = 0;//set id to 0
+		m_uLevel = 0;//sets level to 0
 		m_pRoot = this;
+		m_v3Center = vector3(0,0,0);//sets the center 
+		m_fSize = 35.0f;//sets the size
+
+		//sets min and max for the octant 
+		m_v3Max = m_v3Center + m_fSize;
+		m_v3Min = m_v3Center - m_fSize;
+
+		//for each of the indexes in the entity manager
+		for (int i = 0; i < m_pEntityMngr->GetEntityCount(); i++) 
+		{
+			m_EntityList.push_back(i);//add the index 
+		}
+		
 	}
 	else //if it's not add it to it's list of children
 	{
 		m_uID++;//increment the ID num
 		m_lChild.push_back(this);
 	}
-	Init();
 	m_uOctantCount++;//adds another octant to the count 
+
+	//if we are over the desired entity count and under the max level 
+	if (m_EntityList.size() > a_nIdealEntityCount && m_uLevel < a_nMaxLevel)
+	{
+		Subdivide();//make more octants 
+	}
+
+	std::cout << m_uOctantCount << "\n";
 }
 
 MyOctant::MyOctant(vector3 a_v3Center, float a_fSize)
@@ -39,6 +68,8 @@ MyOctant::MyOctant(vector3 a_v3Center, float a_fSize)
 	//sets min and max for the octant 
 	m_v3Max = m_v3Center + a_fSize;
 	m_v3Min = m_v3Center - a_fSize;
+
+	Init();
 	
 	if (m_uOctantCount == 0)//if this is the first octant make it the root  
 	{
@@ -50,14 +81,26 @@ MyOctant::MyOctant(vector3 a_v3Center, float a_fSize)
 		m_uID++;//increment the ID num
 		m_lChild.push_back(this);
 	}
-	Init();
 	m_uOctantCount++;//adds another octant to the count 
+	
 }
 
 //copy constructor
 MyOctant::MyOctant(MyOctant const& other) 
 {
-
+	m_uID = other.m_uID;
+	m_uLevel = other.m_uLevel;
+	m_uChildren = other.m_uChildren;
+	m_fSize = other.m_fSize;
+	*m_pParent = *other.m_pParent;
+	*m_pRoot = *other.m_pRoot;
+	for (int i = 0; i < 0; i++)
+	{
+		*m_pChild[i] = *other.m_pChild[i];
+	}
+	m_EntityList = other.m_EntityList;
+	Init();
+	
 }
 
 //copy assignment operator
@@ -73,12 +116,14 @@ MyOctant& MyOctant::operator=(MyOctant const& other)
 		*m_pChild[i] = *other.m_pChild[i];
 	}
 	m_EntityList = other.m_EntityList;
+	return (MyOctant&)other;
 }
 
 //destructor
 MyOctant::~MyOctant(void) 
 {
-
+	m_uOctantCount--;
+	std::cout << m_uOctantCount << "\n";
 }
 
 void MyOctant::Swap(MyOctant& other) 
@@ -110,17 +155,30 @@ vector3 MyOctant::GetMaxGlobal(void)
 	return m_v3Max;
 }
 
+//checks in indexed rigidbody is colliding with rigidbodies in the octant 
 bool MyOctant::IsColliding(uint a_uRBIndex) 
 {
-	return false;
+	//for each model in this octant's list 
+	for each(uint num in m_EntityList) 
+	{
+		//if the provided index is colliding with them
+		if (m_pEntityMngr->GetRigidBody(a_uRBIndex)->IsColliding(m_pEntityMngr->GetRigidBody(num)))
+		{
+			return true;//yes
+		}
+	}
+	
+	return false;//else no
 }
 
+//displays the octant box 
 void MyOctant::Display(uint a_nIndex, vector3 a_v3Color) 
 {
 	matrix4 octBox = glm::translate(m_v3Center) * glm::scale(vector3(m_v3Max.x-m_v3Min.x, m_v3Max.y - m_v3Min.y, m_v3Max.z - m_v3Min.z));
 	m_pMeshMngr->AddWireCubeToRenderList(octBox, a_v3Color, 1);
 }
 
+//displays the octant box 
 void MyOctant::Display(vector3 a_v3Color) 
 {
 	matrix4 octBox = glm::translate(m_v3Center) * glm::scale(vector3(m_v3Max.x - m_v3Min.x, m_v3Max.y - m_v3Min.y, m_v3Max.z - m_v3Min.z));
@@ -141,12 +199,26 @@ void MyOctant::Subdivide(void)
 {
 	if (IsLeaf()) //if the octant is a leaf 
 	{
+		//centerpoints for the 8 children
+		vector3 centerPoints[8];
+		centerPoints[0] = vector3(m_v3Center.x + (m_fSize / 2.0f), m_v3Center.y + (m_fSize / 2.0f), m_v3Center.z + (m_fSize / 2.0f));
+		centerPoints[1] = vector3(m_v3Center.x - (m_fSize / 2.0f), m_v3Center.y + (m_fSize / 2.0f), m_v3Center.z + (m_fSize / 2.0f));
+		centerPoints[2] = vector3(m_v3Center.x + (m_fSize / 2.0f), m_v3Center.y + (m_fSize / 2.0f), m_v3Center.z - (m_fSize / 2.0f));
+		centerPoints[3] = vector3(m_v3Center.x - (m_fSize / 2.0f), m_v3Center.y + (m_fSize / 2.0f), m_v3Center.z - (m_fSize / 2.0f));
+		centerPoints[4] = vector3(m_v3Center.x + (m_fSize / 2.0f), m_v3Center.y - (m_fSize / 2.0f), m_v3Center.z + (m_fSize / 2.0f));
+		centerPoints[5] = vector3(m_v3Center.x - (m_fSize / 2.0f), m_v3Center.y - (m_fSize / 2.0f), m_v3Center.z + (m_fSize / 2.0f));
+		centerPoints[6] = vector3(m_v3Center.x + (m_fSize / 2.0f), m_v3Center.y - (m_fSize / 2.0f), m_v3Center.z - (m_fSize / 2.0f));
+		centerPoints[7] = vector3(m_v3Center.x - (m_fSize / 2.0f), m_v3Center.y - (m_fSize / 2.0f), m_v3Center.z - (m_fSize / 2.0f));
+
 		m_uChildren = 8;//set number of children to 8
+
 		//for each of the nex 8 children
+		uint nextLvl = m_uLevel++;
 		for (int i = 0; i < 8; i++) 
 		{
-			m_pChild[i] = new MyOctant((uint) 2, (uint) 5);
-			m_pChild[i]->m_uLevel++;//makes the new octants in the next level
+			//makes one of the correct size at a nex center point 
+			m_pChild[i] = new MyOctant(centerPoints[i], (m_fSize/8.0f));
+			m_pChild[i]->m_uLevel = nextLvl;//makes the new octants in the next level
 			m_pChild[i]->m_pParent = this;//sets the parent to this object
 		}
 	}
@@ -198,6 +270,7 @@ void MyOctant::KillBranches(void)
 		if (child->IsLeaf() == true)//if there are no children
 		{
 			SafeDelete(child);//delete this
+			m_uOctantCount--;
 		}
 		else 
 		{

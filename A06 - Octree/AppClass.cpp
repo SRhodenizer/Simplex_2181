@@ -25,14 +25,15 @@ void Application::InitVariables(void)
 		{
 			uIndex++;
 			m_pEntityMngr->AddEntity("Minecraft\\Cube.obj");
+			std::cout << m_pEntityMngr->GetEntityCount() << "\n";
 			vector3 v3Position = vector3(glm::sphericalRand(34.0f));
 			matrix4 m4Position = glm::translate(v3Position);
 			m_pEntityMngr->SetModelMatrix(m4Position);
 		}
 	}
-	m_uOctantLevels = 1;
-	m_pRoot = new MyOctant(vector3(0,0,0),35.0f);//makes the root Octant 
+	m_uOctantLevels = 1;//levels in the octree 0 = root, 1 = first set of children
 	m_pEntityMngr->Update();
+	m_pRoot = new MyOctant(m_uOctantLevels, 5);//makes the root Octant 
 }
 void Application::Update(void)
 {
