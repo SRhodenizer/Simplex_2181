@@ -311,7 +311,7 @@ uint MyRigidBody::SAT(MyRigidBody* const a_pOther)
 	}
 
 	//computes translation vector 
-	vector3 trans =  a_pOther->m_v3Center - m_v3Center;
+	vector3 trans =  a_pOther->GetCenterGlobal() - GetCenterGlobal();
 
 	//changes translation to the correct coordinate frame 
 	trans = vector3(glm::dot(trans, obj1[0]), glm::dot(trans, obj1[1]), glm::dot(trans, obj1[2]));
