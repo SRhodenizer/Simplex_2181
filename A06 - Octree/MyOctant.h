@@ -1,5 +1,6 @@
 #pragma once
 #include "Simplex\Physics\EntityManager.h"
+#include "MyEntityManager.h"
 
 namespace Simplex 
 {
@@ -16,7 +17,7 @@ namespace Simplex
 		float m_fSize = 0.0f; //Size of the octant
 
 		MeshManager* m_pMeshMngr = nullptr;//Mesh Manager singleton
-		EntityManager* m_pEntityMngr = nullptr; //Entity Manager Singleton
+		MyEntityManager* m_pEntityMngr = nullptr; //Entity Manager Singleton
 
 		vector3 m_v3Center = vector3(0.0f); //Will store the center point of the octant
 		vector3 m_v3Min = vector3(0.0f); //Will store the minimum vector of the octant

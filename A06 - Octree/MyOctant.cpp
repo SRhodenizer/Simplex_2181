@@ -11,8 +11,7 @@ void MyOctant::Init(void)
 {
 	//initialize Mesh and Entity Managers 
 	m_pMeshMngr = MeshManager::GetInstance();
-	m_pEntityMngr = EntityManager::GetInstance(); //STEPHEN, THIS IS THE WRONG CLASS, DUMMY ~JORDAN
-	std::cout << "Duh\n";
+	m_pEntityMngr = MyEntityManager::GetInstance();
 }
 
 //constructor
@@ -57,7 +56,7 @@ MyOctant::MyOctant(uint a_nMaxLevel, uint a_nIdealEntityCount)
 		Subdivide();//make more octants 
 	}
 
-	std::cout << m_uOctantCount << "\n";
+	std::cout <<"OctCount "<< m_uOctantCount << "\n";
 }
 
 MyOctant::MyOctant(vector3 a_v3Center, float a_fSize)
@@ -122,6 +121,10 @@ MyOctant& MyOctant::operator=(MyOctant const& other)
 //destructor
 MyOctant::~MyOctant(void) 
 {
+	if (!IsLeaf()) 
+	{
+		KillBranches();
+	}
 	m_uOctantCount--;
 	std::cout << m_uOctantCount << "\n";
 }
@@ -183,6 +186,14 @@ void MyOctant::Display(vector3 a_v3Color)
 {
 	matrix4 octBox = glm::translate(m_v3Center) * glm::scale(vector3(m_v3Max.x - m_v3Min.x, m_v3Max.y - m_v3Min.y, m_v3Max.z - m_v3Min.z));
 	m_pMeshMngr->AddWireCubeToRenderList(octBox, a_v3Color, 1);
+
+	for(int i = 0; i < 8;i++) 
+	{
+		if (m_pChild[i] != nullptr) 
+		{
+			m_pChild[i]->Display(a_v3Color);
+		}
+	}
 }
 
 void MyOctant::DisplayLeafs(vector3 a_v3Color) 
@@ -217,7 +228,7 @@ void MyOctant::Subdivide(void)
 		for (int i = 0; i < 8; i++) 
 		{
 			//makes one of the correct size at a nex center point 
-			m_pChild[i] = new MyOctant(centerPoints[i], (m_fSize/8.0f));
+			m_pChild[i] = new MyOctant(centerPoints[i], (m_fSize/2.0f));
 			m_pChild[i]->m_uLevel = nextLvl;//makes the new octants in the next level
 			m_pChild[i]->m_pParent = this;//sets the parent to this object
 		}
