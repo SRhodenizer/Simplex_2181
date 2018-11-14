@@ -1,6 +1,7 @@
 #pragma once
 #include "Simplex\Physics\EntityManager.h"
 #include "MyEntityManager.h"
+#include "MyRigidBody.h"
 
 namespace Simplex 
 {
@@ -9,6 +10,11 @@ namespace Simplex
 		static uint m_uOctantCount; //will store the number of octants instantiated
 		static uint m_uMaxLevel;//will store the maximum level an octant can go to
 		static uint m_uIdealEntityCount; //will tell how many ideal Entities this object will contain
+		
+		static uint currentMaxLevel;
+		static uint numCreated;
+		static uint layers;
+		static uint totalOcts;
 
 		uint m_uID = 0; //Will store the current ID for this octant
 		uint m_uLevel = 0; //Will store the current level of the octant
@@ -27,6 +33,7 @@ namespace Simplex
 		MyOctant* m_pChild[8];//Will store the children of the current octant
 
 		std::vector<uint> m_EntityList; //List of Entities under this octant (Index in Entity Manager)
+		MyRigidBody* m_pMyRigidbody;
 
 		MyOctant* m_pRoot = nullptr;//Root octant
 		std::vector<MyOctant*> m_lChild; //list of nodes that contain objects (this will be applied to root only)

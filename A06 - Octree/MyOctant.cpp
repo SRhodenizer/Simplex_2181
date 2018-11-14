@@ -5,6 +5,10 @@ using namespace Simplex;
 uint MyOctant::m_uOctantCount;
 uint MyOctant::m_uMaxLevel;
 uint MyOctant::m_uIdealEntityCount;
+uint MyOctant::currentMaxLevel;
+uint MyOctant::numCreated;
+uint MyOctant::layers;
+uint MyOctant::totalOcts;
 
 //initialize member variables 
 void MyOctant::Init(void)
@@ -14,15 +18,13 @@ void MyOctant::Init(void)
 	m_pEntityMngr = MyEntityManager::GetInstance();
 }
 
-//constructor
+//constructor for the root octant
 MyOctant::MyOctant(uint a_nMaxLevel, uint a_nIdealEntityCount) 
 {
 	m_uMaxLevel = a_nMaxLevel;//sets max level 
 	m_uIdealEntityCount = a_nIdealEntityCount;//sets ideal entity count
 
-	Init();//initialize the member variables 
-
-	std::cout << "OctCount "<<m_uOctantCount << "\n";
+	Init();//initialize the singleton entity manager and mesh manager 
 
 	if (m_uOctantCount == 0)//if this is the first octant make it the root  
 	{
@@ -31,6 +33,9 @@ MyOctant::MyOctant(uint a_nMaxLevel, uint a_nIdealEntityCount)
 		m_pRoot = this;
 		m_v3Center = vector3(0,0,0);//sets the center 
 		m_fSize = 35.0f;//sets the size
+		currentMaxLevel = 0;
+		numCreated = 0;
+		layers = 0;
 
 		//sets min and max for the octant 
 		m_v3Max = m_v3Center + m_fSize;
@@ -51,42 +56,85 @@ MyOctant::MyOctant(uint a_nMaxLevel, uint a_nIdealEntityCount)
 	m_uOctantCount++;//adds another octant to the count 
 
 	//if we are over the desired entity count and under the max level 
-	if (m_EntityList.size() > a_nIdealEntityCount && m_uLevel < a_nMaxLevel)
+	if (m_EntityList.size() > m_uIdealEntityCount && m_uLevel < m_uMaxLevel)
 	{
+		currentMaxLevel++;
+		
 		Subdivide();//make more octants 
 	}
 
-	std::cout <<"OctCount "<< m_uOctantCount << "\n";
 }
 
+//makes the branch octants 
 MyOctant::MyOctant(vector3 a_v3Center, float a_fSize)
 {
+	Init();//initialize the singleton entity manager and mesh manager 
+
+	//sets the level for the octant 
+	m_uLevel = currentMaxLevel;
+
+	if (m_uLevel == m_uMaxLevel) 
+	{
+		numCreated++;
+		//layers++;
+	}
+
+	if (numCreated == 8) 
+	{
+		currentMaxLevel--;
+		totalOcts++;
+		numCreated = 0;
+	}
+
+	if (totalOcts == 8)
+	{
+		currentMaxLevel--;
+		layers++;
+		totalOcts = 0;
+	}
+	
+	if (layers == 8)
+	{
+		currentMaxLevel--;
+		layers = 0;
+	}
+	
+
 	m_v3Center = a_v3Center;//sets the center 
 	m_fSize = a_fSize;//sets the size
 
 	//sets min and max for the octant 
 	m_v3Max = m_v3Center + a_fSize;
 	m_v3Min = m_v3Center - a_fSize;
-
-	Init();
 	
-	if (m_uOctantCount == 0)//if this is the first octant make it the root  
+	m_uID++;//increment the ID num
+	//if the octant is a child of the root add it to the right list
+	if (m_uOctantCount > 0 && m_uOctantCount < 9)
 	{
-		m_uID = 0;//set id to 0
-		m_pRoot = this;
+		m_lChild.push_back(this);//add it to the list of children
 	}
-	else //if it's not add it to it's list of children
-	{
-		m_uID++;//increment the ID num
-		m_lChild.push_back(this);
-	}
+	
 	m_uOctantCount++;//adds another octant to the count 
 	
+	//for each of the indexes in the entity manager - NEEDS CHANGING
+	for (int i = 0; i < 6; i++)
+	{
+		m_EntityList.push_back(i);//add the index 
+	}
+
+	//if we are over the desired entity count and under the max level 
+ 	if (m_EntityList.size() > m_uIdealEntityCount && m_uLevel < m_uMaxLevel)
+	{
+		currentMaxLevel++;
+		Subdivide();//make more octants
+		std::cout << "OctCount: "<<m_uOctantCount<<"\n";
+	}
 }
 
 //copy constructor
 MyOctant::MyOctant(MyOctant const& other) 
 {
+	Init();
 	m_uID = other.m_uID;
 	m_uLevel = other.m_uLevel;
 	m_uChildren = other.m_uChildren;
@@ -98,7 +146,7 @@ MyOctant::MyOctant(MyOctant const& other)
 		*m_pChild[i] = *other.m_pChild[i];
 	}
 	m_EntityList = other.m_EntityList;
-	Init();
+	
 	
 }
 
@@ -125,8 +173,13 @@ MyOctant::~MyOctant(void)
 	{
 		KillBranches();
 	}
-	m_uOctantCount--;
-	std::cout << m_uOctantCount << "\n";
+	//m_uOctantCount--;
+	
+	currentMaxLevel = 0;
+	numCreated = 0;
+	m_uOctantCount = 0;
+	totalOcts = 0;
+	layers = 0;
 }
 
 void MyOctant::Swap(MyOctant& other) 
@@ -224,14 +277,14 @@ void MyOctant::Subdivide(void)
 		m_uChildren = 8;//set number of children to 8
 
 		//for each of the nex 8 children
-		uint nextLvl = m_uLevel++;
 		for (int i = 0; i < 8; i++) 
 		{
 			//makes one of the correct size at a nex center point 
 			m_pChild[i] = new MyOctant(centerPoints[i], (m_fSize/2.0f));
-			m_pChild[i]->m_uLevel = nextLvl;//makes the new octants in the next level
 			m_pChild[i]->m_pParent = this;//sets the parent to this object
+			std::cout << "Child Level: " << m_pChild[i]->m_uLevel << "\n";
 		}
+
 	}
 }
 
@@ -281,7 +334,6 @@ void MyOctant::KillBranches(void)
 		if (child->IsLeaf() == true)//if there are no children
 		{
 			SafeDelete(child);//delete this
-			m_uOctantCount--;
 		}
 		else 
 		{

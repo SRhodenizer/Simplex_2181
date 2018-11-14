@@ -133,7 +133,7 @@ void Application::ProcessKeyReleased(sf::Event a_event)
 			
 			SafeDelete(m_pRoot);
 			m_pRoot = new MyOctant(m_uOctantLevels, 5);
-			std::cout << "Duh\n";
+			std::cout << "OctantCount: "<<m_pRoot->GetOctantCount()<<"\n";
 			
 		}
 		break;
@@ -145,7 +145,7 @@ void Application::ProcessKeyReleased(sf::Event a_event)
 			
 			SafeDelete(m_pRoot);
 			m_pRoot = new MyOctant(m_uOctantLevels, 5);
-			std::cout << "Duh\n";
+			std::cout << "OctantCount: " << m_pRoot->GetOctantCount() << "\n";
 			
 		}
 		break;

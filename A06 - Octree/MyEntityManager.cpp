@@ -2,6 +2,18 @@
 using namespace Simplex;
 //  MyEntityManager
 Simplex::MyEntityManager* Simplex::MyEntityManager::m_pInstance = nullptr;
+
+std::vector<MyEntity> Simplex::MyEntityManager::GetEntityList(void) 
+{
+	std::vector<MyEntity> list; 
+	for (int i = 0; i < GetEntityCount(); i++) 
+	{
+		list.push_back(*m_mEntityArray[i]);
+	}
+	return list;
+}
+
+
 void Simplex::MyEntityManager::Init(void)
 {
 	m_uEntityCount = 0;

@@ -18,6 +18,7 @@ class MyEntityManager
 	PEntity* m_mEntityArray = nullptr; //array of MyEntity pointers
 	static MyEntityManager* m_pInstance; // Singleton pointer
 public:
+	std::vector<MyEntity> GetEntityList(void);
 	/*
 	Usage: Gets the singleton pointer
 	Arguments: ---
