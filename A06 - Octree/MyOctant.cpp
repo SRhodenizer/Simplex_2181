@@ -5,10 +5,6 @@ using namespace Simplex;
 uint MyOctant::m_uOctantCount;
 uint MyOctant::m_uMaxLevel;
 uint MyOctant::m_uIdealEntityCount;
-uint MyOctant::currentMaxLevel;
-uint MyOctant::numCreated;
-uint MyOctant::layers;
-uint MyOctant::totalOcts;
 
 //initialize member variables 
 void MyOctant::Init(void)
@@ -16,6 +12,36 @@ void MyOctant::Init(void)
 	//initialize Mesh and Entity Managers 
 	m_pMeshMngr = MeshManager::GetInstance();
 	m_pEntityMngr = MyEntityManager::GetInstance();
+	m_uChildren = 0;
+	MyEntity** l_Entity_List = m_pEntityMngr->GetEntityList();
+	uint iEntityCount = m_pEntityMngr->GetEntityCount();
+	std::vector<vector3> v3MaxMin_list;
+	for (uint i = 0; i < iEntityCount; ++i)
+	{
+		MyRigidBody* pRG = l_Entity_List[i]->GetRigidBody();
+		vector3 v3Min = pRG->GetMinGlobal();
+		vector3 v3Max = pRG->GetMaxGlobal();
+		v3MaxMin_list.push_back(v3Min);
+		v3MaxMin_list.push_back(v3Max);
+		
+		
+	}
+	
+	m_pRigidBody = new MyRigidBody(v3MaxMin_list);
+
+	//set values for the octant
+	m_v3Min = m_pRigidBody->GetMinGlobal();
+	m_v3Max = m_pRigidBody->GetMaxGlobal();
+	m_v3Center = m_pRigidBody->GetCenterGlobal();
+	m_fSize = glm::length(m_pRigidBody->GetHalfWidth())/2 + 5;
+
+	/*MyEntity** list = m_pEntityMngr->GetEntityList();
+	for (int i = 0; i < m_pEntityMngr->GetEntityCount(); i++)
+	{
+		m_pRoot->Add(*list[i]);
+	}*/
+
+
 }
 
 //constructor for the root octant
@@ -26,42 +52,28 @@ MyOctant::MyOctant(uint a_nMaxLevel, uint a_nIdealEntityCount)
 
 	Init();//initialize the singleton entity manager and mesh manager 
 
-	if (m_uOctantCount == 0)//if this is the first octant make it the root  
-	{
-		m_uID = 0;//set id to 0
-		m_uLevel = 0;//sets level to 0
-		m_pRoot = this;
-		m_v3Center = vector3(0,0,0);//sets the center 
-		m_fSize = 35.0f;//sets the size
-		currentMaxLevel = 0;
-		numCreated = 0;
-		layers = 0;
+	m_uID = 0;//set id to 0
+	m_uLevel = 0;//sets level to 0
+	m_pRoot = this;
 
-		//sets min and max for the octant 
-		m_v3Max = m_v3Center + m_fSize;
-		m_v3Min = m_v3Center - m_fSize;
-
-		//for each of the indexes in the entity manager
-		for (int i = 0; i < m_pEntityMngr->GetEntityCount(); i++) 
-		{
-			m_EntityList.push_back(i);//add the index 
-		}
-		
-	}
-	else //if it's not add it to it's list of children
-	{
-		m_uID++;//increment the ID num
-		m_lChild.push_back(this);
-	}
+	//sets min and max for the octant 
+	m_v3Max = m_v3Center + m_fSize;
+	m_v3Min = m_v3Center - m_fSize;
+	
 	m_uOctantCount++;//adds another octant to the count 
 
+	/*for (int i = 0; i < m_uMaxLevel; i++) 
+	{
+		Subdivide();
+	}*/
+
 	//if we are over the desired entity count and under the max level 
-	if (m_EntityList.size() > m_uIdealEntityCount && m_uLevel < m_uMaxLevel)
+	/*if (m_EntityList.size() > m_uIdealEntityCount && m_uLevel < m_uMaxLevel)
 	{
 		currentMaxLevel++;
 		
 		Subdivide();//make more octants 
-	}
+	}*/
 
 }
 
@@ -71,34 +83,7 @@ MyOctant::MyOctant(vector3 a_v3Center, float a_fSize)
 	Init();//initialize the singleton entity manager and mesh manager 
 
 	//sets the level for the octant 
-	m_uLevel = currentMaxLevel;
-
-	if (m_uLevel == m_uMaxLevel) 
-	{
-		numCreated++;
-		//layers++;
-	}
-
-	if (numCreated == 8) 
-	{
-		currentMaxLevel--;
-		totalOcts++;
-		numCreated = 0;
-	}
-
-	if (totalOcts == 8)
-	{
-		currentMaxLevel--;
-		layers++;
-		totalOcts = 0;
-	}
-	
-	if (layers == 8)
-	{
-		currentMaxLevel--;
-		layers = 0;
-	}
-	
+	m_uLevel = GetCurrentLevel();
 
 	m_v3Center = a_v3Center;//sets the center 
 	m_fSize = a_fSize;//sets the size
@@ -116,19 +101,13 @@ MyOctant::MyOctant(vector3 a_v3Center, float a_fSize)
 	
 	m_uOctantCount++;//adds another octant to the count 
 	
-	//for each of the indexes in the entity manager - NEEDS CHANGING
-	for (int i = 0; i < 6; i++)
-	{
-		m_EntityList.push_back(i);//add the index 
-	}
-
 	//if we are over the desired entity count and under the max level 
- 	if (m_EntityList.size() > m_uIdealEntityCount && m_uLevel < m_uMaxLevel)
+ 	/*if (m_EntityList.size() > m_uIdealEntityCount && m_uLevel < m_uMaxLevel)
 	{
 		currentMaxLevel++;
 		Subdivide();//make more octants
 		std::cout << "OctCount: "<<m_uOctantCount<<"\n";
-	}
+	}*/
 }
 
 //copy constructor
@@ -146,8 +125,6 @@ MyOctant::MyOctant(MyOctant const& other)
 		*m_pChild[i] = *other.m_pChild[i];
 	}
 	m_EntityList = other.m_EntityList;
-	
-	
 }
 
 //copy assignment operator
@@ -174,12 +151,11 @@ MyOctant::~MyOctant(void)
 		KillBranches();
 	}
 	//m_uOctantCount--;
-	
-	currentMaxLevel = 0;
-	numCreated = 0;
+	for (size_t i = 0; i < m_EntityList.size(); i++)
+	{
+		m_EntityList[i].ClearDimensionSet();
+	}
 	m_uOctantCount = 0;
-	totalOcts = 0;
-	layers = 0;
 }
 
 void MyOctant::Swap(MyOctant& other) 
@@ -212,19 +188,26 @@ vector3 MyOctant::GetMaxGlobal(void)
 }
 
 //checks in indexed rigidbody is colliding with rigidbodies in the octant 
-bool MyOctant::IsColliding(uint a_uRBIndex) 
+bool MyOctant::IsColliding(MyEntity e) 
 {
-	//for each model in this octant's list 
-	for each(uint num in m_EntityList) 
+	if (!IsLeaf()) //if this is not a leaf
 	{
-		//if the provided index is colliding with them
-		if (m_pEntityMngr->GetRigidBody(a_uRBIndex)->IsColliding(m_pEntityMngr->GetRigidBody(num)))
-		{
-			return true;//yes
-		}
+		//Do nothing
 	}
-	
-	return false;//else no
+	else 
+	{
+		//for each model in this octant's list 
+		for each(MyEntity ent in m_EntityList)
+		{
+			//if the provided entity is colliding with them
+			if (e.GetRigidBody()->IsColliding(ent.GetRigidBody()))
+			{
+				return true;//yes
+			}
+		}
+
+		return false;//else no
+	}
 }
 
 //displays the octant box 
@@ -237,8 +220,11 @@ void MyOctant::Display(uint a_nIndex, vector3 a_v3Color)
 //displays the octant box 
 void MyOctant::Display(vector3 a_v3Color) 
 {
-	matrix4 octBox = glm::translate(m_v3Center) * glm::scale(vector3(m_v3Max.x - m_v3Min.x, m_v3Max.y - m_v3Min.y, m_v3Max.z - m_v3Min.z));
-	m_pMeshMngr->AddWireCubeToRenderList(octBox, a_v3Color, 1);
+	if (IsLeaf()) 
+	{
+		matrix4 octBox = glm::translate(m_v3Center) * glm::scale(vector3(m_v3Max.x - m_v3Min.x, m_v3Max.y - m_v3Min.y, m_v3Max.z - m_v3Min.z));
+		m_pMeshMngr->AddWireCubeToRenderList(octBox, a_v3Color, 1);
+	}
 
 	for(int i = 0; i < 8;i++) 
 	{
@@ -282,9 +268,17 @@ void MyOctant::Subdivide(void)
 			//makes one of the correct size at a nex center point 
 			m_pChild[i] = new MyOctant(centerPoints[i], (m_fSize/2.0f));
 			m_pChild[i]->m_pParent = this;//sets the parent to this object
-			std::cout << "Child Level: " << m_pChild[i]->m_uLevel << "\n";
+			std::cout << "Child Level: " << m_pChild[i]->GetCurrentLevel() << "\n";
 		}
 
+	}
+	else 
+	{
+		for (int i = 0; i < 8; i++) 
+		{
+			
+			m_pChild[i]->Subdivide();
+		}
 	}
 }
 
@@ -371,4 +365,95 @@ void MyOctant::Release(void)
 void MyOctant::ConstructList(void) 
 {
 
+}
+
+//adds an entity to the entity list
+void MyOctant::Add(MyEntity ent) 
+{
+	if (!IsLeaf()) 
+	{
+		AddToChildren(ent);
+	}
+	else 
+	{
+		int t = GetCurrentLevel();
+		if (m_EntityList.size() >= m_uIdealEntityCount && t < m_uMaxLevel)
+		{
+			GetRoot()->Subdivide();//make more octants
+			for (int i = 0; i < 8; i++) 
+			{
+				m_pChild[i]->Add(ent);
+			}
+			std::cout << "OctCount: "<<m_uOctantCount<<"\n";
+		}
+		else 
+		{
+			if (m_pRigidBody->IsColliding(ent.GetRigidBody()))
+			{
+				
+				m_EntityList.push_back(ent);
+				//m_pEntityMngr->AddDimension(m_pEntityMngr->GetEntityIndex(ent.GetUniqueID()),m_uID);
+			}
+		}
+	}
+}
+
+//adds an entity to the child entity list
+void MyOctant::AddToChildren(MyEntity ent)
+{
+	for each(MyOctant* child in m_pChild)//for all children in the octree 
+	{
+		if (child->IsLeaf() == true)//if there are no children
+		{
+			child->Add(ent);//add to this
+		}
+		else 
+		{
+			child->AddToChildren(ent);
+		}
+		
+	}
+}
+
+//gets the current level of the octant
+int MyOctant::GetCurrentLevel()
+{
+	MyOctant* Node = this;
+	int i = 0;
+	while (Node->m_pParent != nullptr)
+	{
+		Node = Node->m_pParent;
+		i++;
+	}
+	return i;
+}
+
+MyOctant* MyOctant::GetRoot(void)
+{
+	MyOctant* Node = this;
+	
+	while (Node->m_pParent != nullptr)
+	{
+		Node = Node->m_pParent;
+		
+	}
+	return Node;
+}
+
+void Simplex::MyOctant::CheckCollisions(void)
+{
+	if (IsLeaf()) 
+	{
+		for (int i = 0; i < m_EntityList.size(); i++)
+		{
+			IsColliding((m_EntityList[i]));
+		}
+	}
+	else 
+	{
+		for (int i = 0; i < 8; i++)
+		{
+			m_pChild[i]->CheckCollisions();
+		}
+	}
 }

@@ -132,8 +132,13 @@ void Application::ProcessKeyReleased(sf::Event a_event)
 			++m_uOctantLevels;
 			
 			SafeDelete(m_pRoot);
-			m_pRoot = new MyOctant(m_uOctantLevels, 5);
+			m_pRoot = new MyOctant(m_uOctantLevels, 1);
 			std::cout << "OctantCount: "<<m_pRoot->GetOctantCount()<<"\n";
+			MyEntity** list = m_pEntityMngr->GetEntityList();
+			for (int i = 0; i < m_pEntityMngr->GetEntityCount(); i++)
+			{
+				m_pRoot->Add(*list[i]);
+			}
 			
 		}
 		break;
@@ -144,8 +149,13 @@ void Application::ProcessKeyReleased(sf::Event a_event)
 			--m_uOctantLevels;
 			
 			SafeDelete(m_pRoot);
-			m_pRoot = new MyOctant(m_uOctantLevels, 5);
+			m_pRoot = new MyOctant(m_uOctantLevels, 1);
 			std::cout << "OctantCount: " << m_pRoot->GetOctantCount() << "\n";
+			MyEntity** list = m_pEntityMngr->GetEntityList();
+			for (int i = 0; i < m_pEntityMngr->GetEntityCount(); i++)
+			{
+				m_pRoot->Add(*list[i]);
+			}
 			
 		}
 		break;

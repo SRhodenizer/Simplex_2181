@@ -10,11 +10,6 @@ namespace Simplex
 		static uint m_uOctantCount; //will store the number of octants instantiated
 		static uint m_uMaxLevel;//will store the maximum level an octant can go to
 		static uint m_uIdealEntityCount; //will tell how many ideal Entities this object will contain
-		
-		static uint currentMaxLevel;
-		static uint numCreated;
-		static uint layers;
-		static uint totalOcts;
 
 		uint m_uID = 0; //Will store the current ID for this octant
 		uint m_uLevel = 0; //Will store the current level of the octant
@@ -32,8 +27,8 @@ namespace Simplex
 		MyOctant* m_pParent = nullptr;// Will store the parent of current octant
 		MyOctant* m_pChild[8];//Will store the children of the current octant
 
-		std::vector<uint> m_EntityList; //List of Entities under this octant (Index in Entity Manager)
-		MyRigidBody* m_pMyRigidbody;
+		std::vector<MyEntity> m_EntityList; //List of Entities under this octant (Index in Entity Manager)
+		MyRigidBody* m_pRigidBody;
 
 		MyOctant* m_pRoot = nullptr;//Root octant
 		std::vector<MyOctant*> m_lChild; //list of nodes that contain objects (this will be applied to root only)
@@ -112,7 +107,7 @@ namespace Simplex
 		- int a_uRBIndex -> Index of the Entity in the Entity Manager
 		OUTPUT: check of the collision
 		*/
-		bool IsColliding(uint a_uRBIndex);
+		bool MyOctant::IsColliding(MyEntity e);
 		/*
 		USAGE: Displays the Octant volume specified by index including the objects underneath
 		ARGUMENTS:
@@ -199,6 +194,20 @@ namespace Simplex
 		*/
 		uint GetOctantCount(void);
 
+
+		//adds an entity to the list
+		void Add(MyEntity);
+
+		//adds an entity to the children's list
+		void AddToChildren(MyEntity);
+
+		//gets the level of the octant
+		int MyOctant::GetCurrentLevel(void);
+		
+		MyOctant* MyOctant::GetRoot(void);
+
+		void CheckCollisions(void);
+
 	private:
 		/*
 		USAGE: Deallocates member fields
@@ -218,6 +227,10 @@ namespace Simplex
 		OUTPUT: ---
 		*/
 		void ConstructList(void);
+
+		
+
+
 	};//class
 
 } //names

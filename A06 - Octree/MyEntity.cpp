@@ -1,6 +1,7 @@
 #include "MyEntity.h"
 using namespace Simplex;
 std::map<String, MyEntity*> MyEntity::m_IDMap;
+uint MyEntity::number;
 //  Accessors
 matrix4 Simplex::MyEntity::GetModelMatrix(void){ return m_m4ToWorld; }
 void Simplex::MyEntity::SetModelMatrix(matrix4 a_m4ToWorld)
@@ -156,7 +157,7 @@ void Simplex::MyEntity::AddDimension(uint a_uDimension)
 	m_DimensionArray = pTemp;
 
 	++m_nDimensionCount;
-
+	number++;
 	SortDimensions();
 }
 void Simplex::MyEntity::RemoveDimension(uint a_uDimension)
@@ -195,7 +196,9 @@ void Simplex::MyEntity::ClearDimensionSet(void)
 		delete[] m_DimensionArray;
 		m_DimensionArray = nullptr;
 	}
+	number -= m_nDimensionCount;
 	m_nDimensionCount = 0;
+	
 }
 bool Simplex::MyEntity::IsInDimension(uint a_uDimension)
 {

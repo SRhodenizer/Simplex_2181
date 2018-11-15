@@ -33,7 +33,12 @@ void Application::InitVariables(void)
 	}
 	m_uOctantLevels = 1;//levels in the octree 0 = root, 1 = first set of children
 	m_pEntityMngr->Update();
-	m_pRoot = new MyOctant(m_uOctantLevels, 5);//makes the root Octant 
+	m_pRoot = new MyOctant(m_uOctantLevels, 1);//makes the root Octant
+	MyEntity** list = m_pEntityMngr->GetEntityList();
+	for (int i = 0; i < m_pEntityMngr->GetEntityCount(); i++)
+	{
+		m_pRoot->Add(*list[i]);
+	}
 }
 void Application::Update(void)
 {
@@ -48,7 +53,7 @@ void Application::Update(void)
 	
 	//Update Entity Manager
 	m_pEntityMngr->Update();
-
+	
 	//Add objects to render list
 	m_pEntityMngr->AddEntityToRenderList(-1, true);
 }
